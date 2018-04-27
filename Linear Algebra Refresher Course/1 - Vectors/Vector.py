@@ -37,8 +37,13 @@ class Vector(object):
         try:
             u1 = self.normalized()
             u2 = v.normalized()
-            angle_in_radians = acos(u1.dot(u2))
-
+            u3 = u1.dot(u2)
+            if u3 > 1:
+                u3 = 1
+            if u3 < -1:
+                u3 = -1
+            angle_in_radians = acos(u3)
+            
             if in_degrees:
                 degrees_per_radian = 180. / pi
                 return angle_in_radians * degrees_per_radian
@@ -80,13 +85,6 @@ class Vector(object):
 
     def __eq__(self, v):
         return self.coordinates == v.coordinates
-
-
-v = Vector([0, 0])
-w = Vector([0, 0])
-print(v.is_parallel_to(w))
-print(v.is_orthogonal_to(w))
-
 
 v = Vector([-7.579, -7.88])
 w = Vector([22.737, 23.64])
