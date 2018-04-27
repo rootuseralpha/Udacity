@@ -7,6 +7,9 @@ getcontext().prec = 30
 class Vector(object):
 
     CANNOT_NORMALIZE_ZERO_VECTOR_MSG = 'Cannot normalize the zero vector'
+    NO_UNIQUE_PARALLEL_COMPONENT_MSG = 'There is no unique parallel component'
+    NO_UNIQUE_ORTHOGONAL_COMPONENT_MSG = 'There is no unique orthogonal component'
+    ONLY_DEFINED_IN_TWO_OR_THREE_DIMS_MSG = 'The cross product will only work for 3 dimensions'
 
     def __init__(self, coordinates):
         try:
@@ -20,6 +23,57 @@ class Vector(object):
 
         except TypeError:
             raise TypeError('The coordinates must be an iterable')
+
+    def cross(self, v):
+        try:
+            x_1, y_1, z_1 = self.coordinates
+            x_2, y_2, z_2 = v.coordinates
+            new_coordinates = [y_1*z_2 - y_2*z_1,
+                               z_1*x_2 - z_2*x_1,
+                               x_1*y_2 - x_2*y_1]
+            return Vector(new_coordinates)
+
+        except ValueError as e:
+            msg = str(e)
+            if msg == 'need more than 2 values to unpack':
+                self_embedded_in_R3 = Vector(self.coordinates + ('0',))
+                v_embedded_in_R3 = Vector(v.coordinates + ('0',))
+                return self_embedded_in_R3.cross(v_embedded_in_R3)
+            elif (msg == 'too many values to unpack' or
+                  msg == 'need more than 1 value to unpack'):
+                raise Exception(self.ONLY_DEFINED_IN_TWO_OR_THREE_DIMS_MSG)
+            else:
+                raise e
+
+    def area_of_parallelogram(self, v):
+        cross = self.cross(v)
+        return Decimal(cross.magnitude())
+
+    def area_of_triangle(self, v):
+        return Decimal(0.5)*self.area_of_parallelogram(v)
+
+    def component_orthogonal_to(self, basis):
+        try:
+            projection = self.component_parallel_to(basis)
+            return self.minus(projection)
+
+        except Exception as e:
+            if str(e) == self.NO_UNIQUE_PARALLEL_COMPONENT_MSG:
+                raise Exception(self.NO_UNIQUE_ORTHOGONAL_COMPONENT_MSG)
+            else:
+                raise e
+
+    def component_parallel_to(self, basis):
+        try:
+            u = basis.normalized()
+            weight = self.dot(u)
+            return u.times_scalar(weight)
+
+        except Exception as e:
+            if str(e) == self.CANNOT_NORMALIZE_ZERO_VECTOR_MSG:
+                raise Exception(self.NO_UNIQUE_PARALLEL_COMPONENT_MSG)
+            else:
+                raise e
 
     def is_orthogonal_to(self, v, tolerance=1e-10):
         return abs(self.dot(v)) < tolerance
@@ -43,7 +97,7 @@ class Vector(object):
             if u3 < -1:
                 u3 = -1
             angle_in_radians = acos(u3)
-            
+
             if in_degrees:
                 degrees_per_radian = 180. / pi
                 return angle_in_radians * degrees_per_radian
@@ -86,22 +140,15 @@ class Vector(object):
     def __eq__(self, v):
         return self.coordinates == v.coordinates
 
-v = Vector([-7.579, -7.88])
-w = Vector([22.737, 23.64])
-print(v.is_parallel_to(w))
-print(v.is_orthogonal_to(w))
 
-v = Vector([-2.029, 9.97, 4.172])
-w = Vector([-9.231, -6.639, -7.245])
-print(v.is_parallel_to(w))
-print(v.is_orthogonal_to(w))
+v = Vector([8.462, 7.893, -8.187])
+w = Vector([6.984, -5.975, 4.778])
+print(v.cross(w))
 
-v = Vector([-2.328, -7.284, -1.214])
-w = Vector([-1.821, 1.072, -2.94])
-print(v.is_parallel_to(w))
-print(v.is_orthogonal_to(w))
+v = Vector([-8.987, -9.838, 5.031])
+w = Vector([-4.268, -1.861, -8.866])
+print(v.area_of_parallelogram(w))
 
-v = Vector([2.118, 4.827])
-w = Vector([0, 0])
-print(v.is_parallel_to(w))
-print(v.is_orthogonal_to(w))
+v = Vector([1.5, 9.547, 3.691])
+w = Vector([-6.007, 0.124, 5.772])
+print(v.area_of_triangle(w))
