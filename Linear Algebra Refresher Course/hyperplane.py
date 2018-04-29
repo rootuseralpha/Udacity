@@ -9,16 +9,24 @@ class MyDecimal(Decimal):
         return abs(self) < eps
 
 
-class Line(object):
+class Hyperplane(object):
 
     NO_NONZERO_ELTS_FOUND_MSG = 'No nonzero elements found'
+    EITHER_DIM_OR_NORMAL_VEC_MUST_BE_PROVIDED_MSG = (
+        'Either the dimension of the hyperplane or the normal vector '
+        'must be provided')
 
-    def __init__(self, normal_vector=None, constant_term=None):
-        self.dimension = 2
+    def __init__(self, dimension=None, normal_vector=None, constant_term=None):
+        if not dimension and not normal_vector:
+            raise Exception(self.EITHER_DIM_OR_NORMAL_VEC_MUST_BE_PROVIDED_MSG)
 
-        if not normal_vector:
+        elif not normal_vector:
+            self.dimension = dimension
             all_zeros = ['0'] * self.dimension
             normal_vector = Vector(all_zeros)
+        else:
+            self.dimension = normal_vector.dimension
+
         self.normal_vector = normal_vector
 
         if not constant_term:
@@ -33,13 +41,14 @@ class Line(object):
             c = self.constant_term
             basepoint_coords = ['0'] * self.dimension
 
-            initial_index = Line.first_nonzero_index(n)
+            initial_index = Hyperplane.first_nonzero_index(n)
             initial_coefficient = n[initial_index]
+
             basepoint_coords[initial_index] = c / initial_coefficient
             self.basepoint = Vector(basepoint_coords)
 
         except Exception as e:
-            if str(e) == Line.NO_NONZERO_ELTS_FOUND_MSG:
+            if str(e) == Hyperplane.NO_NONZERO_ELTS_FOUND_MSG:
                 self.basepoint = None
             else:
                 raise e
@@ -71,9 +80,9 @@ class Line(object):
         n = self.normal_vector
 
         try:
-            initial_index = Line.first_nonzero_index(n)
-            terms = [write_coefficient(n[i],
-                                       is_initial_term=(i == initial_index)) +
+            initial_index = Hyperplane.first_nonzero_index(n)
+            terms = [write_coefficient(
+                     n[i], is_initial_term=(i == initial_index)) +
                      'x_{}'.format(i + 1)
                      for i in range(self.dimension)
                      if round(n[i], num_decimal_places) != 0]
@@ -92,78 +101,47 @@ class Line(object):
 
         return output
 
+    def is_parallel(self, plane2):
+        return self.normal_vector.is_parallel(plane2.normal_vector)
+
+    def __eq__(self, plane2):
+        if self.normal_vector.is_zero():
+            if not plane2.normal_vector.is_zero():
+                return False
+
+            diff = self.constant_term - plane2.constant_term
+            return MyDecimal(diff).is_near_zero()
+
+        elif plane2.normal_vector.is_zero():
+            return False
+
+        if not self.is_parallel(plane2):
+            return False
+
+        basepoint_difference = self.basepoint.minus(plane2.basepoint)
+        return basepoint_difference.is_orthogonal(self.normal_vector)
+
+    def __iter__(self):
+        self.current = 0
+        return self
+
+    def next(self):
+        if self.current >= len(self.normal_vector):
+            raise StopIteration
+        else:
+            current_value = self.normal_vector[self.current]
+            self.current += 1
+            return current_value
+
+    def __len__(self):
+        return len(self.normal_vector)
+
+    def __getitem__(self, i):
+        return self.normal_vector[i]
+
     @staticmethod
     def first_nonzero_index(iterable):
         for k, item in enumerate(iterable):
             if not MyDecimal(item).is_near_zero():
                 return k
-        raise Exception(Line.NO_NONZERO_ELTS_FOUND_MSG)
-
-    def is_parallel(self, line2):
-        return self.normal_vector.is_parallel(line2.normal_vector)
-
-    def __eq__(self, line2):
-        if self.normal_vector.is_zero():
-            if not line2.normal_vector.is_zero():
-                return False
-
-            diff = self.constant_term - line2.constant_term
-            return MyDecimal(diff).is_near_zero()
-
-        elif line2.normal_vector.is_zero():
-            return False
-
-        if not self.is_parallel(line2):
-            return False
-
-        basepoint_difference = self.basepoint.minus(line2.basepoint)
-        return basepoint_difference.is_orthogonal(self.normal_vector)
-
-    def intersection(self, line2):
-
-        a, b = self.normal_vector.coordinates
-        c, d = line2.normal_vector.coordinates
-        k1 = self.constant_term
-        k2 = line2.constant_term
-        denom = ((a * d) - (b * c))
-
-        if MyDecimal(denom).is_near_zero():
-            if self == line2:
-                return self
-            else:
-                return None
-
-        one_over_denom = Decimal('1') / ((a * d) - (b * c))
-        x_num = (d * k1 - b * k2)
-        y_num = (-c * k1 + a * k2)
-
-        return Vector([x_num, y_num]).times_scalar(one_over_denom)
-
-
-# first system
-# 4.046x + 2.836y = 1.21
-# 10.115x + 7.09y = 3.025
-
-line1 = Line(Vector([4.046, 2.836]), 1.21)
-line2 = Line(Vector([10.115, 7.09]), 3.025)
-
-print 'first system instersects in: {}'.format(line1.intersection(line2))
-
-
-# second system
-# 7.204x + 3.182y = 8.68
-# 8.172x + 4.114y = 9.883
-
-line3 = Line(Vector([7.204, 3.182]), 8.68)
-line4 = Line(Vector([8.172, 4.114]), 9.883)
-
-print 'second system instersects in: {}'.format(line3.intersection(line4))
-
-# third system
-# 1.182x + 5.562y = 6.744
-# 1.773x + 8.343y = 9.525
-
-line5 = Line(Vector([1.182, 5.562]), 6.744)
-line6 = Line(Vector([1.773, 8.343]), 9.525)
-
-print 'third system instersects in: {}'.format(line5.intersection(line6))
+        raise Exception(Hyperplane.NO_NONZERO_ELTS_FOUND_MSG)
