@@ -86,6 +86,7 @@ class Vector(object):
         return (self.is_zero() or other.is_zero() or
                 self.get_angle_rad(other) in [0, pi])
 
+<<<<<<< HEAD:Linear Algebra Refresher Course/vector.py
     def is_orthogonal(self, other):
         return round(self.dot_product(other), 3) == 0
 
@@ -241,3 +242,20 @@ if __name__ == '__main__':
 
     area_triangle = v3.area_triangle(w3)
     print 'area triangle is: {}'.format(round(area_triangle, 3))
+=======
+    def __eq__(self, v):
+        return self.coordinates == v.coordinates
+
+
+v = Vector([8.462, 7.893, -8.187])
+w = Vector([6.984, -5.975, 4.778])
+print(v.cross(w))
+
+v = Vector([-8.987, -9.838, 5.031])
+w = Vector([-4.268, -1.861, -8.866])
+print(v.area_of_parallelogram(w))
+
+v = Vector([1.5, 9.547, 3.691])
+w = Vector([-6.007, 0.124, 5.772])
+print(v.area_of_triangle(w))
+>>>>>>> parent of f6f27bf... blah:Linear Algebra Refresher Course/1 - Vectors/Vector.py
